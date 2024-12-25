@@ -49,6 +49,11 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  int trace;                   // 1 if tracing is enabled, 0 otherwise
+  int flagIndex; 
+  int sysCallIndex ; //1-23 (refer syscall.h)
+  int printonshell ;
+
 };
 
 // Process memory is laid out contiguously, low addresses first:

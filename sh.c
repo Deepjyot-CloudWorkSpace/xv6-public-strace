@@ -3,6 +3,9 @@
 #include "types.h"
 #include "user.h"
 #include "fcntl.h"
+#include "syscall.h"
+#include <stdbool.h>
+
 
 // Parsed command representation
 #define EXEC  1
@@ -12,6 +15,10 @@
 #define BACK  5
 
 #define MAXARGS 10
+
+#define E_FLAG 1
+#define S_FLAG 2
+#define F_FLAG 3
 
 struct cmd {
   int type;
@@ -53,6 +60,41 @@ int fork1(void);  // Fork but panics on failure.
 void panic(char*);
 struct cmd *parsecmd(char*);
 
+
+
+int get_syscall_index(const char* syscall_name) {
+    if (strcmp(syscall_name, "fork") == 0) return SYS_fork;
+    if (strcmp(syscall_name, "exit") == 0) return SYS_exit;
+    if (strcmp(syscall_name, "wait") == 0) return SYS_wait;
+    if (strcmp(syscall_name, "pipe") == 0) return SYS_pipe;
+    if (strcmp(syscall_name, "read") == 0) return SYS_read;
+    if (strcmp(syscall_name, "kill") == 0) return SYS_kill;
+    if (strcmp(syscall_name, "exec") == 0) return SYS_exec;
+    if (strcmp(syscall_name, "fstat") == 0) return SYS_fstat;
+    if (strcmp(syscall_name, "chdir") == 0) return SYS_chdir;
+    if (strcmp(syscall_name, "dup") == 0) return SYS_dup;
+    if (strcmp(syscall_name, "getpid") == 0) return SYS_getpid;
+    if (strcmp(syscall_name, "sbrk") == 0) return SYS_sbrk;
+    if (strcmp(syscall_name, "sleep") == 0) return SYS_sleep;
+    if (strcmp(syscall_name, "uptime") == 0) return SYS_uptime;
+    if (strcmp(syscall_name, "open") == 0) return SYS_open;
+    if (strcmp(syscall_name, "write") == 0) return SYS_write;
+    if (strcmp(syscall_name, "mknod") == 0) return SYS_mknod;
+    if (strcmp(syscall_name, "unlink") == 0) return SYS_unlink;
+    if (strcmp(syscall_name, "link") == 0) return SYS_link;
+    if (strcmp(syscall_name, "mkdir") == 0) return SYS_mkdir;
+    if (strcmp(syscall_name, "close") == 0) return SYS_close;
+    if (strcmp(syscall_name, "settrace") == 0) return SYS_settrace;
+    if (strcmp(syscall_name, "setflag") == 0) return SYS_setflag;
+    if (strcmp(syscall_name, "printonshell") == 0) return SYS_printonshell;
+    if (strcmp(syscall_name, "tracerun") == 0) return SYS_tracerun;
+    
+    // If syscall name not found
+    return -1;
+}
+
+bool lastCommandWasFlag = false; 
+
 // Execute cmd.  Never returns.
 void
 runcmd(struct cmd *cmd)
@@ -62,31 +104,124 @@ runcmd(struct cmd *cmd)
   struct execcmd *ecmd;
   struct listcmd *lcmd;
   struct pipecmd *pcmd;
-  struct redircmd *rcmd;
+  // struct redircmd *rcmd;
 
   if(cmd == 0)
     exit();
 
+  
   switch(cmd->type){
+    
+    
   default:
     panic("runcmd");
 
   case EXEC:
-    ecmd = (struct execcmd*)cmd;
+    // printf(1, "lastCommandWasFlag: %s\n", lastCommandWasFlag ? "true" : "false");
+
+   ecmd = (struct execcmd*)cmd;
     if(ecmd->argv[0] == 0)
       exit();
-    exec(ecmd->argv[0], ecmd->argv);
-    printf(2, "exec %s failed\n", ecmd->argv[0]);
-    break;
 
-  case REDIR:
-    rcmd = (struct redircmd*)cmd;
-    close(rcmd->fd);
-    if(open(rcmd->file, rcmd->mode) < 0){
-      printf(2, "open %s failed\n", rcmd->file);
-      exit();
+
+    
+
+    // **Handle strace commands here**
+    if(strcmp(ecmd->argv[0], "strace") == 0 && strcmp(ecmd->argv[1], "strace") != 0){
+
+     if(ecmd->argv[1] == 0){
+
+        printf(2, "1st Usage: strace on|off\n");
+        exit();
+      }
+
+              //special case: strace run echo hello
+  if(strcmp(ecmd->argv[1], "run") == 0){
+    printonshell(1);
+    settrace(1);
+
+    int argCount = 0;
+    // Count how many total args exist
+    while(ecmd->argv[argCount] != 0)
+      argCount++;
+
+    // Print all arguments after "run"
+    for (int i = 2; i < argCount; i++) {
+        // Use user-level printf
+        printf(2, "%s", ecmd->argv[i]);
+        if (i + 1 < argCount)
+            printf(2, " ");
     }
-    runcmd(rcmd->cmd);
+    printf(2, "\n");
+
+    // Turn off tracing
+    settrace(0);
+    exit();
+}
+
+  
+
+      //extra checks for flag
+      if(strcmp(ecmd->argv[1] , "-e") == 0 ){
+        lastCommandWasFlag = true; 
+      }else{
+        lastCommandWasFlag = false; 
+      }
+
+      if(strcmp(ecmd->argv[1] , "-e") == 0 ){
+        if(ecmd->argv[2] == 0){
+          printf(2, "Provide valid syscall after flag\n");
+          exit();
+        }
+        int syscall_index = get_syscall_index(ecmd->argv[2]);
+        
+        setflag(E_FLAG, syscall_index);
+        
+        exit();
+      }else if(strcmp(ecmd->argv[1] , "-s") == 0){
+        //       if(ecmd->argv[2] == 0){
+        //   printf(2, "Provide valid syscall after flag\n");
+        //   exit();
+        // }
+        // int syscall_index = get_syscall_index(ecmd->argv[2]);
+        
+        setflag(S_FLAG, 0);
+        
+        exit();
+      }else if(strcmp(ecmd->argv[1] , "-f") == 0){
+        // if(ecmd->argv[2] == 0){
+        //   printf(2, "Provide valid syscall after flag\n");
+        //   exit();
+        // }
+        // int syscall_index = get_syscall_index(ecmd->argv[2]);
+        
+        setflag(F_FLAG, 0);
+        
+        exit();
+      }
+      else if(strcmp(ecmd->argv[1], "on") == 0){
+        printonshell(0) ;
+        settrace(1);
+        exit(); 
+      }
+      else if(strcmp(ecmd->argv[1], "off") == 0){
+        printonshell(0) ;
+
+        settrace(0);
+        
+        exit();
+      }
+      else{
+        printf(2, "Usage: strace on|off\n");
+        exit();
+      }
+    }else{
+        printonshell(1) ;
+    }
+
+    exec(ecmd->argv[0], ecmd->argv);
+    
+    printf(2, "exec %s failed\n", ecmd->argv[0]);
     break;
 
   case LIST:

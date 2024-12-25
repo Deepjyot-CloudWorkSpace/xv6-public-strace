@@ -23,6 +23,11 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+int settrace(int enable);
+int setflag(int flagIndex, int sysCallIndex);
+int printonshell(int enable);
+int tracerun(const char* argument1, const char* argument2 );
+
 
 // ulib.c
 int stat(const char*, struct stat*);

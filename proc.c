@@ -91,6 +91,11 @@ found:
 
   release(&ptable.lock);
 
+  //DJ : Initialize
+  // p->trace = 1;           
+  // p->flagIndex = -1;      
+  // p->sysCallIndex = -1;    // Initialize syscall index (adjust as needed)
+
   // Allocate kernel stack.
   if((p->kstack = kalloc()) == 0){
     p->state = UNUSED;
@@ -532,3 +537,7 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+
+// struct syscall_event syscall_log[SYSCALL_LOG_SIZE];  // Circular buffer
+// int syscall_log_index = 0;  // Index for the next event in the buffer

@@ -89,3 +89,66 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+
+int
+sys_settrace(void)
+{
+  int enable;
+  if(argint(0, &enable) < 0)
+    return -1;
+  myproc()->trace = enable;
+  return 0;
+}
+
+
+int 
+sys_setflag(void){
+  int flagIndex ;
+  int sysCallIndex ; 
+
+  if(argint(0, &flagIndex) < 0)
+    return -1;
+
+  if(argint(1, &sysCallIndex) < 0)
+    return -1;
+
+  myproc()->flagIndex = flagIndex;
+  myproc()->sysCallIndex = sysCallIndex;
+
+  return 0;
+
+}
+
+int
+sys_printonshell(void)
+{
+  int enable;
+  if(argint(0, &enable) < 0)
+    return -1;
+  myproc()->printonshell = enable;
+  return 0;
+}
+
+
+int
+sys_tracerun(void)
+{
+  char *argument1;
+  char *argument2;
+
+  // Retrieve the first string argument
+  if(argstr(0, &argument1) < 0)
+    return -1;
+
+  // Retrieve the second string argument
+  if(argstr(1, &argument2) < 0)
+    return -1;
+
+  // Use argument1 and argument2 as needed
+  // For example, you could store them in the proc struct, print them, etc.
+  // myproc()->someStringField1 = argument1;
+  // myproc()->someStringField2 = argument2;
+  
+  return 0;
+}
